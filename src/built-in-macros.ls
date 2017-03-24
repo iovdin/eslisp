@@ -421,7 +421,22 @@ contents =
         ..filename = displayed-filename
       require-substitute = new-module.require.bind new-module
 
-      vm.runInNewContext "(#{env.compile-to-js es-ast})" { require: require-substitute, module: new-module}
+      ctx = {
+        process
+        Buffer
+        clearImmediate
+        clearInterval
+        clearTimeout
+        setImmediate
+        setInterval
+        setTimeout
+        console
+        module: new-module
+        require: require-substitute
+      }
+      ctx.global = ctx
+
+      vm.runInNewContext "(#{env.compile-to-js es-ast})" ctx
 
     switch &length
     | 1 =>
