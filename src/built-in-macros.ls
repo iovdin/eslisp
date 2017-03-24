@@ -1,4 +1,5 @@
 { map, zip, concat-map } = require \prelude-ls
+vm = require \vm
 { is-expression } = require \esutils .ast
 statementify = require \./es-statementify
 {
@@ -420,8 +421,7 @@ contents =
         ..filename = displayed-filename
       require-substitute = new-module.require.bind new-module
 
-      let require = require-substitute
-        eval "(#{env.compile-to-js es-ast})"
+      vm.runInNewContext "(#{env.compile-to-js es-ast})" { require: require-substitute, module: new-module}
 
     switch &length
     | 1 =>
