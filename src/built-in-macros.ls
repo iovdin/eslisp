@@ -20,11 +20,11 @@ chained-binary-expr = (type, operator) ->
       left  : @compile &0
       right : @compile &1
     | otherwise =>
-      [ head, ...rest ] = &
+      [ ...head, rest ] = &
       macro.call do
         this
-        macro.call this, @compile head
-        macro.apply this, rest
+        macro.apply this, head
+        macro.call this, @compile rest
 
   ->
     if &length is 1

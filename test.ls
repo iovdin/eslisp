@@ -58,7 +58,7 @@ test "string literal newline escape" ->
 
 test "n-ary plus" ->
   esl "(+ 3 4 5)"
-    ..`@equals` "3 + (4 + 5);"
+    ..`@equals` "3 + 4 + 5;"
 
 test "plus nests" ->
   esl "(+ 1 (+ 2 3))"
@@ -74,11 +74,11 @@ test "unary minus" ->
 
 test "n-ary minus" ->
   esl "(- 10 2 1)"
-    ..`@equals` "10 - (2 - 1);"
+    ..`@equals` "10 - 2 - 1;"
 
 test "n-ary multiplication" ->
   esl "(* 1 2 3)"
-    ..`@equals` "1 * (2 * 3);"
+    ..`@equals` "1 * 2 * 3;"
 
 test "unary multiplication is invalid" ->
   (-> esl "(* 2)")
@@ -86,7 +86,7 @@ test "unary multiplication is invalid" ->
 
 test "n-ary division" ->
   esl "(/ 1 2 3)"
-    ..`@equals` "1 / (2 / 3);"
+    ..`@equals` "1 / 2 / 3;"
 
 test "unary division is invalid" ->
   (-> esl "(/ 2)")
@@ -94,7 +94,7 @@ test "unary division is invalid" ->
 
 test "n-ary modulus" ->
   esl "(% 1 2 3)"
-    ..`@equals` "1 % (2 % 3);"
+    ..`@equals` "1 % 2 % 3;"
 
 test "prefix increment expression" ->
   esl "(_++ x)"
@@ -114,7 +114,7 @@ test "postfix decrement expression" ->
 
 test "chainable logical expressions" ->
   esl "(&& 1 2 3) (|| 1 2 3)"
-    ..`@equals` "1 && (2 && 3);\n1 || (2 || 3);"
+    ..`@equals` "1 && 2 && 3;\n1 || 2 || 3;"
 
 test "unary logical not" ->
   esl "(! 1)"
@@ -134,19 +134,19 @@ test "unary void" ->
 
 test "chainable instanceof" -> # yes, making that chain is maybe odd
   esl "(instanceof x y z)"
-    ..`@equals` "x instanceof (y instanceof z);"
+    ..`@equals` "x instanceof y instanceof z;"
 
 test "chainable in" ->
   esl "(in x y z)"
-    ..`@equals` "x in (y in z);"
+    ..`@equals` "x in y in z;"
 
 test "bitwise &, |, ^ are chainable" ->
   esl "(& 1 2 3) (| 1 2 3) (^ 1 2 3)"
-    ..`@equals` "1 & (2 & 3);\n1 | (2 | 3);\n1 ^ (2 ^ 3);"
+    ..`@equals` "1 & 2 & 3;\n1 | 2 | 3;\n1 ^ 2 ^ 3;"
 
 test "bitwise shifts are chainable" ->
   esl "(<< 1 2 3) (>> 1 2 3) (>>> 1 2 3)"
-    ..`@equals` "1 << (2 << 3);\n1 >> (2 >> 3);\n1 >>> (2 >>> 3);"
+    ..`@equals` "1 << 2 << 3;\n1 >> 2 >> 3;\n1 >>> 2 >>> 3;"
 
 test "unary bitwise not" ->
   esl "(~ x)"
@@ -154,20 +154,20 @@ test "unary bitwise not" ->
 
 test "equals expression, chainable" ->
   esl "(== x y z)"
-    ..`@equals` "x == (y == z);"
+    ..`@equals` "x == y == z;"
 test "disequals expression, chainable" ->
   esl "(!= x y z)"
-    ..`@equals` "x != (y != z);"
+    ..`@equals` "x != y != z;"
 test "strong-equals expression, chainable" ->
   esl "(=== x y z)"
-    ..`@equals` "x === (y === z);"
+    ..`@equals` "x === y === z;"
 test "strong-disequals expression, chainable" ->
   esl "(!== x y z)"
-    ..`@equals` "x !== (y !== z);"
+    ..`@equals` "x !== y !== z;"
 
 test "comparison expressions, chainable" -> # >, <= and >= are same code path
   esl "(< x y z)"
-    ..`@equals` "x < (y < z);"
+    ..`@equals` "x < y < z;"
 
 test "sequence expression (comma-separated expressions)" ->
   esl "(seq x y z)"
@@ -694,7 +694,7 @@ test "macros can unquote arrays into quasiquoted lists (non-splicing)" ->
 test "macros can splice arrays into quasiquoted lists" ->
   esl "(macro sumOf (lambda (xs) (return `(+ ,@xs))))
        (sumOf (1 2 3))"
-    ..`@equals` "1 + (2 + 3);"
+    ..`@equals` "1 + 2 + 3;"
 
 test "macros can splice in empty arrays" ->
   esl "(macro sumOf (lambda (xs) (return `(+ 1 2 ,@xs))))
@@ -712,7 +712,7 @@ test "quasiquote can contain nested lists" ->
         (return `(/ (+ ,@args) ,total))))
        (mean 1 2 3)
       '''
-    ..`@equals` "(1 + (2 + 3)) / 3;"
+    ..`@equals` "(1 + 2 + 3) / 3;"
 
 test "array macro produces array expression" ->
   esl "(array 1 2 3)"
