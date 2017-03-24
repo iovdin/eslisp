@@ -73,7 +73,7 @@ parsed-options.argv.remain
 
 compiler-opts = {}
 if parsed-options.transform
-  compiler-opts.transform-macros = that .map require
+  compiler-opts.transformers = that .map require
 
 compile-and-show = (code, filename=null) ->
   code .= to-string!

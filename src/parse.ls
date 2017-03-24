@@ -2,11 +2,13 @@
 # AST objects.
 sexpr = require \sexpr-plus
 
-parse-sexpr = (input) ->
+parse-sexpr = (input, options = {}) ->
   parser = sexpr!
-  s = parser.main.parse input
-  if s.status then s.value
-  else throw Error "Parse error: expected #{s.expected} at #{s.index}"
+  (options.transformers || []) .for-each (transformer) ->
+    transformer.call null parser
+  parser.main.try-parse input
+  #if s.status then s.value
+  #else throw Error "Parse error: expected #{s.expected} at #{s.index}"
 
 list = (values, location)  -> { type : \list values, location }
 atom = (value, location)   -> { type : \atom value, location }

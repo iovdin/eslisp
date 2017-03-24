@@ -7,22 +7,12 @@ statementify     = require \./es-statementify
 environment      = require \./env
 compile          = require \./compile
 
-{ create-transform-macro } = require \./import-macro
+#{ create-transform-macro } = require \./import-macro
 
 { errors } = require \esvalid
 
 module.exports = (root-env, ast, options={}) ->
-
-  transform-macros = (options.transform-macros || []) .map (func) ->
-    isolated-env = environment root-macro-table
-    create-transform-macro isolated-env, func
-
   statements = ast
-
-  transform-macros .for-each (macro) ->
-    statements := (macro.apply null, statements)
-      .filter (isnt null)
-
   program-ast =
     type : \Program
     body : statements

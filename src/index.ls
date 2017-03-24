@@ -7,8 +7,8 @@ environment = require \./env
 
 to-estree = (root-env, input, options) ->
   input.to-string!
-  |> string-to-ast
-  |> ast-to-estree root-env, _, transform-macros : options.transform-macros
+  |> string-to-ast _, transformers : options.transformers
+  |> ast-to-estree root-env, _
 
 compile = (root-env, input, options={}) ->
   to-estree.apply null arguments

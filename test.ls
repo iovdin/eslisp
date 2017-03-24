@@ -1135,49 +1135,6 @@ test "multiple invocations of the compiler are separate" ->
   esl "(what)"
     .. `@equals` "what();" # instead of "hi;"
 
-test "transform-macro can replace contents" ->
-  wrapper = ->
-    @list do
-      @atom \*
-      @atom \3
-      @atom \4
-  esl "(+ 1 2)" transform-macros : [ wrapper ]
-    .. `@equals` "3 * 4;"
-
-test "transform-macro can return null" ->
-  wrapper = -> null
-  esl "(+ 1 2)" transform-macros : [ wrapper ]
-    .. `@equals` ""
-
-test "transform-macro can return empty array" ->
-  wrapper = -> []
-  esl "(+ 1 2)" transform-macros : [ wrapper ]
-    .. `@equals` ""
-
-test "transform-macro can receive arguments" ->
-  wrapper = (...args) ->
-    @list.apply null [ @atom "hi" ].concat args
-  esl "(+ 1 2) (+ 3 4)" transform-macros : [ wrapper ]
-    .. `@equals` "hi(1 + 2, 3 + 4);"
-
-test "transform-macro can multi-return" ->
-  wrapper = (...args) ->
-    [ (@atom \hi), (@atom "yo") ]
-  esl "" transform-macros : [ wrapper ]
-    .. `@equals` "hi;\nyo;"
-
-test "multiple transform-macros can be used" ->
-  wrapper-passthrough = (...args) -> args
-  esl "(+ 1 2)" transform-macros : [ wrapper-passthrough, wrapper-passthrough ]
-    .. `@equals` "1 + 2;"
-
-test "multiple transform-macros are applied in order" ->
-  wrap1 = (...args) -> @list.apply null [ @atom \one ].concat args
-  wrap2 = (...args) -> @list.apply null [ @atom \two ].concat args
-  wrap3 = (...args) -> @list.apply null [ @atom \three ].concat args
-  esl "zero" transform-macros : [ wrap1, wrap2, wrap3 ]
-    .. `@equals` "three(two(one(zero)));"
-
 test "identifier source map" ->
   { code, map } = esl.with-source-map "x" filename : "test.esl"
 
