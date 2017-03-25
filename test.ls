@@ -750,6 +750,10 @@ test "property access (dotting) chains identifiers" ->
   esl "(. a b c)"
     ..`@equals` "a.b.c;"
 
+test "property access (dotting) chains function calls" ->
+  esl "(. a (b) c)"
+    ..`@equals` "a.b().c;"
+
 test "property access (dotting) chains literals" ->
   esl "(. a 1 2)"
     ..`@equals` "a[1][2];"

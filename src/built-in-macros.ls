@@ -294,10 +294,20 @@ contents =
       | args.length is 1 => compile args.0
       | args.length is 2
         property-compiled = compile args.1
-        type : \MemberExpression
-        computed : is-computed-property property-compiled
-        object   : compile args.0
-        property : property-compiled
+        if property-compiled.type == \CallExpression then
+          type: \CallExpression
+          callee:
+            type : \MemberExpression
+            computed : is-computed-property property-compiled.callee
+            object   : compile args.0
+            property : property-compiled.callee
+          arguments: property-compiled.arguments
+          loc: property-compiled.loc
+        else
+          type : \MemberExpression
+          computed : is-computed-property property-compiled
+          object   : compile args.0
+          property : property-compiled
       | arguments.length > 2
         [ ...initial, last ] = args
         dot.call do
