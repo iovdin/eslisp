@@ -277,7 +277,7 @@ contents =
 
   \return : (arg) ->
     type : \ReturnStatement
-    argument : @compile arg
+    argument : if arg then @compile arg else null
 
   \. : do
 
