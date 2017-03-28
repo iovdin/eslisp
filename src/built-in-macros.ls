@@ -222,7 +222,7 @@ contents =
   \if : (test, consequent, alternate) ->
     type : \IfStatement
     test       : @compile test
-    consequent : statementify @compile consequent
+    consequent : if consequent then  statementify @compile consequent else type: "EmptyStatement"
     alternate :
       if alternate then statementify @compile that
       else null
