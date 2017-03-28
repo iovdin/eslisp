@@ -6,6 +6,7 @@
 { keys, concat-map, unfoldr, map, reverse, fold } = require \prelude-ls
 es-generate = require \escodegen .generate _
 compile = require \./compile
+string-to-ast = require \./parse
 
 # Recursively search a macro table and its parents for a macro with a given
 # name.  Returns `null` if unsuccessful; a macro representing the function if
@@ -43,6 +44,7 @@ class env
     @macro-table = contents : {} parent : root-table
     @root-table = root-table
     @filename = options.filename || null
+    @transformers = options.transformers
 
     # The import-target-macro-tables argument is for the situation when a macro
     # returns another macro.  In such a case, the returned macro should be
@@ -57,6 +59,9 @@ class env
   atom   : (value) ->  { type : \atom, value : value.to-string! }
   string : (value) ->  { type : \string, value }
   list   : (...values) -> { type : \list, values }
+
+  parse : (input, options = { @transformers })  ~>
+    string-to-ast input, options
 
   compile : ~> # compile to estree
     compile this, it
@@ -102,7 +107,7 @@ class env
     # implements macro scope; macros defined in the new environment aren't
     # visible in the outer one.
 
-    env @macro-table, { @import-target-macro-tables, @filename }
+    env @macro-table, { @import-target-macro-tables, @filename, @transformers }
 
   derive-flattened : ~>
 
@@ -134,6 +139,7 @@ class env
       {
         import-target-macro-tables : tables-to-import-into
         @filename
+        @transformers
       }
 
   derive-root : ~>
@@ -141,7 +147,7 @@ class env
     import-targets = (@import-target-macro-tables || [ @macro-table ])
     env do
       root-table
-      { import-target-macro-tables : import-targets }
+      { import-target-macro-tables : import-targets, @transformers }
 
   find-macro : (name) ~> find-macro @macro-table, name
 

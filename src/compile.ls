@@ -134,6 +134,8 @@ list-to-estree = (env, { values }:ast, options={}) ->
       { line, column } = ast.location.start
       e.message  = "Error evaluating macro `#{head.value}` \
                     (called at line #line, column #column): #{e.message}"
+      e.type = "SyntaxError"
+      e.node = loc : ast.location
       throw e
 
     switch typeof! macro-return

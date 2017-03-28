@@ -15,18 +15,18 @@ compile = (root-env, input, options={}) ->
   |> estree-to-js
 
 make-stateful-compiler = (options={}) ->
-  root-env = environment root-macro-table, { filename : options.filename }
+  root-env = environment root-macro-table, { filename : options.filename , transformers : options.transformers}
   return compile root-env, _, options
 
 compile-once = (input, options={}) ->
-  root-env = environment root-macro-table, { filename : options.filename }
+  root-env = environment root-macro-table, { filename : options.filename, transformers : options.transformers}
   return compile root-env, input, options
 
 compile-with-source-map = (input, options={}) ->
 
   root-env = environment do
     root-macro-table
-    { filename : options.filename }
+    { filename : options.filename, transformers : options.transformers }
 
   escodegen-opts =
     # We definitely do always want to get a return value with both the code and
