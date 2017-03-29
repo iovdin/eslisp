@@ -131,9 +131,13 @@ list-to-estree = (env, { values }:ast, options={}) ->
 
       # Prepend data to the error message to help in debugging.
 
-      { line, column } = ast.location.start
-      e.message  = "Error evaluating macro `#{head.value}` \
-                    (called at line #line, column #column): #{e.message}"
+      if ast.location
+        { line, column } = ast.location.start
+        e.message  = "Error evaluating macro `#{head.value}` \
+                      (called at line #line, column #column): #{e.message}"
+      else
+        e.message = "Error evaluating macro `#{head.value}` \
+                     : #{e.message}"
       e.type = "SyntaxError"
       e.node = loc : ast.location
       throw e
