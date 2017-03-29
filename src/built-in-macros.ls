@@ -227,6 +227,11 @@ contents =
       if alternate then statementify @compile that
       else null
 
+  \with : (expr, ...body) ->
+    type : \WithStatement
+    object : @compile expr
+    body : optionally-implicit-block-statement this, body
+
   \?: : (test, consequent, alternate) ->
     type : \ConditionalExpression
     test       : @compile test
