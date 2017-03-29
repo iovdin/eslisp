@@ -12,13 +12,18 @@ string-to-ast = require \./parse
 # name.  Returns `null` if unsuccessful; a macro representing the function if
 # successful.
 find-macro = (macro-table, name) ->
-  switch macro-table.contents[name]
-  | null => null                          # deliberately masks parent; fail
-  | undefined =>                          # not defined at this level
-    if macro-table.parent
-      find-macro macro-table.parent, name # ask parent
-    else return null                      # no parent to ask; fail
-  | otherwise => that                     # defined at this level; succeed
+  ownProperty = macro-table.contents.has-own-property name
+  macro = macro-table.contents[name]
+  if macro is null
+    return null
+
+  if typeof macro is "function" and ownProperty
+    return macro
+
+  if macro-table.parent
+    return find-macro macro-table.parent, name # ask parent
+
+  return null
 
 flatten-macro-table = (table) ->
   table
