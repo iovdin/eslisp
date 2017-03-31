@@ -147,14 +147,19 @@ list-to-estree = (env, { values }:ast, options={}) ->
     | \Undefined => null
     | \Array =>
 
+      #flatten list
+
       macro-return.for-each ->
         switch typeof! it
         | \Object => # that's OK
         | otherwise =>
           throw Error "Unexpected `#that` value received in multi-return"
-      macro-return.map ->
+      macro-return =macro-return.map ->
         ast-to-estree env, it
           ..?loc ||= head.location
+      # previous map can return array of array
+      # so lets flatten it
+      Array.prototype.concat.apply [], macro-return
 
     | \Object =>
 
@@ -185,8 +190,9 @@ ast-to-estree = (env, ast, options) ->
   | \atom   => atom-to-estree  .apply null arguments
   | \string => string-to-estree.apply null arguments
   | \list   => list-to-estree  .apply null arguments
+  | undefined =>
+          throw Error "Unexpected `#ast` value received in multi-return"
   | otherwise => ast
-
 ast-to-self-producer = (env, ast) ->
   switch ast.type
   | \atom   => atom-to-self-producer ast.value
