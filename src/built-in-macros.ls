@@ -190,17 +190,23 @@ contents =
         value : compile v
         key : compile k
 
-  \var : (name, value) ->
-    if &length > 2
-      throw Error "Expected variable declaration to get 1 or 2 arguments, \
-                   but got #{&length}."
+  \var : (...args) ->
+    if &length == 0
+      throw Error "Expected variable declaration to get at least 1 argument."
+    keys-values = do # [ [k1, v1], [k2, v2] , ... ]
+      keys = [] ; values = []
+      args.for-each (a, i) -> (if i % 2 then values else keys).push a
+      if keys.length > values.length then
+        values.push null
+      zip keys, values
+    { compile } = env = this;
     type : \VariableDeclaration
     kind : "var"
-    declarations : [
-      type : \VariableDeclarator
-      id : @compile name
-      init : if value then @compile value else null
-    ]
+    declarations :
+      keys-values.map ([k, v]) ->
+        type : \VariableDeclarator
+        id : compile k
+        init : if v then compile v else null
 
   \block : (...statements) ->
     type : \BlockStatement
