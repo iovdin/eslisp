@@ -50,6 +50,7 @@ class env
     @root-table = root-table
     @filename = options.filename || null
     @transformers = options.transformers
+    @gensyms = options.gensyms or {}
 
     # The import-target-macro-tables argument is for the situation when a macro
     # returns another macro.  In such a case, the returned macro should be
@@ -64,6 +65,12 @@ class env
   atom   : (value) ->  { type : \atom, value : value.to-string! }
   string : (value) ->  { type : \string, value }
   list   : (...values) -> { type : \list, values }
+
+  gensym : (prefix) ->
+    prefix = prefix or "_ref"
+    prefix-number = 1 + (@gensyms[prefix] or 0)
+    @gensyms[prefix] = prefix-number
+    return @atom prefix + prefix-number
 
   parse : (input, options = { @transformers })  ~>
     string-to-ast input, options
@@ -112,7 +119,7 @@ class env
     # implements macro scope; macros defined in the new environment aren't
     # visible in the outer one.
 
-    env @macro-table, { @import-target-macro-tables, @filename, @transformers }
+    env @macro-table, { @import-target-macro-tables, @filename, @transformers, @gensyms }
 
   derive-flattened : ~>
 
@@ -145,6 +152,7 @@ class env
         import-target-macro-tables : tables-to-import-into
         @filename
         @transformers
+        @gensyms
       }
 
   derive-root : ~>
@@ -152,7 +160,7 @@ class env
     import-targets = (@import-target-macro-tables || [ @macro-table ])
     env do
       root-table
-      { import-target-macro-tables : import-targets, @transformers }
+      { import-target-macro-tables : import-targets, @transformers, @gensyms }
 
   find-macro : (name) ~> find-macro @macro-table, name
 
