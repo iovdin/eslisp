@@ -52,6 +52,6 @@
     "esvalid": "1.1.0",
     "nopt": "^4.0.1",
     "prelude-ls": "^1.1.1",
-    "sexpr-plus": "^7.0.0"
+    "sexpr-plus": "https://github.com/iovdin/sexpr-plus/tarball/expose-subparsers"
   }
 }
