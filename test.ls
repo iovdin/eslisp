@@ -7,6 +7,7 @@ concat = require \concat-stream
 
 esl = require \./src/index.ls
 
+# Some helper functions
 test = (name, test-func) ->
   tape name, (t) ->
     test-func.call t  # Make `this` refer to tape's asserts
@@ -15,6 +16,10 @@ test-async = (name, test-func) ->
   tape name, (t) ->
     test-func.call t
     # Don't end automatically
+
+##
+## Basic frame
+##
 
 test "nothing" ->
   esl ""
@@ -27,6 +32,10 @@ test "plain comment" ->
 test "first-line shebang" ->
   esl "#!something goes here\n(hello)\n"
     ..`@equals` "hello();"
+
+##
+## Literals
+##
 
 test "plain numeric literal" ->
   esl "3"
@@ -60,17 +69,46 @@ test "n-ary plus" ->
   esl "(+ 3 4 5)"
     ..`@equals` "3 + 4 + 5;"
 
-test "plus nests" ->
-  esl "(+ 1 (+ 2 3))"
-    ..`@equals` "1 + (2 + 3);"
+test "regex literal" ->
+  esl '(regex ".*")'
+    ..`@equals` "/.*/;"
 
-test "unary plus" ->
-  esl "(+ 1)"
-    ..`@equals` "+1;"
+test "regex literal with flags" ->
+  esl '(regex ".*" "gm")'
+    ..`@equals` "/.*/gm;"
 
-test "unary minus" ->
-  esl "(- 1)"
-    ..`@equals` "-1;"
+test "regex literals are escaped" ->
+  esl '(regex "/.\\"*")'
+    ..`@equals` "/\\/.\"*/;"
+
+test "regex literals can be derived from atoms too" ->
+  esl '(regex abc.* g)'
+    ..`@equals` "/abc.*/g;"
+
+test "regex can be given atoms with escaped spaces and slashes" ->
+  esl '(regex abc\\ */ g)'
+    ..`@equals` "/abc *\\//g;"
+
+test "array" ->
+  esl "(array 1 2 3)"
+    ..`@equals` "[\n    1,\n    2,\n    3\n];"
+
+test "empty array" ->
+  esl "(array)"
+    ..`@equals` "[];"
+
+test "object" ->
+  esl "(object a 1 b 2)"
+    ..`@equals` "({\n    a: 1,\n    b: 2\n});"
+
+test "object with string keys" ->
+  esl '(object "a" 1 "b" 2)'
+    ..`@equals` "({\n    'a': 1,\n    'b': 2\n});"
+
+test "object with expressions as values" ->
+  esl '(object "a" (+ 1 2) "b" (f x))'
+    ..`@equals` "({\n    'a': 1 + 2,\n    'b': f(x)\n});"
+# dynamic *keys* would be ES6
 
 test "n-ary minus" ->
   esl "(- 10 2 1)"
@@ -79,6 +117,71 @@ test "n-ary minus" ->
 test "n-ary multiplication" ->
   esl "(* 1 2 3)"
     ..`@equals` "1 * 2 * 3;"
+
+##
+## Operators
+##
+
+test "binary operators work" ->
+  # Except for update operators, check that the JavaScript operators that eslisp
+  # uses the same characters for, as in:
+  #
+  #   (<operator> a b c)
+  #
+  # compiles to
+  #
+  #   a <opearator> b <opearator> c;
+  #
+  <[ + - * / % + - << >> >>> < <= > >= in instanceof == != === !== & ^ | & || =
+    += -= *= /= %= <<= >>= >>>= &= ^= |= ]> .for-each (o) ~>
+    @equals do
+      esl "(#o a b c)"
+      "a #o b #o c;"
+      "operator #o works"
+  # The one special case is the sequence expression operator ",": because ","
+  # in eslisp is reserved for a different thing, we call that "seq".
+  @equals do
+    esl "(seq a b c)"
+    "a, b, c;"
+    "operator seq works"
+
+test "unary operators work" ->
+  # Operators that have NO space between them an the operand
+  <[ !  ~ + - ]> .for-each (o) ~>
+    @equals do
+      esl "(#o a)"
+      "#{o}a;"
+      "unary operator #o works"
+
+  # Operators that have a space between them an the operand
+  <[ typeof void delete ]> .for-each (o) ~>
+    @equals do
+      esl "(#o a)"
+      "#{o} a;"
+      "unary operator #o works"
+
+test "ternary operator" ->
+  esl '(?: "x" 0 1)'
+    ..`@equals` "'x' ? 0 : 1;"
+
+test "update operators work" ->
+  eq = (input, output) ~> @equals (esl input), output
+  @comment \prefix
+  "(++ x)" `eq` "++x;"
+  "(-- x)" `eq` "--x;"
+  "(++_ x)" `eq` "++x;"
+  "(--_ x)" `eq` "--x;"
+  @comment \postfix
+  "(_++ x)" `eq` "x++;"
+  "(_-- x)" `eq` "x--;"
+
+# The JavaScript operators we don't yet support are:
+#
+#   yield yield* ** **=
+
+test "manual plus nesting" ->
+  esl "(+ 1 (+ 2 3))"
+    ..`@equals` "1 + (2 + 3);"
 
 test "unary multiplication is invalid" ->
   (-> esl "(* 2)")
@@ -173,6 +276,10 @@ test "sequence expression (comma-separated expressions)" ->
   esl "(seq x y z)"
     ..`@equals` "x, y, z;"
 
+##
+## Functions
+##
+
 test "function expression" ->
   esl "(lambda (x) (return (+ x 1)))"
     ..`@equals` "(function (x) {\n    return x + 1;\n});"
@@ -193,11 +300,9 @@ test "function with no arguments" ->
   esl "(lambda () (return 1))"
     ..`@equals` "(function () {\n    return 1;\n});"
 
-test "assignment expressions" ->
-  <[ += -= *= /= %=
-     &= |= ^= >>= <<= >>>= ]> .for-each ~>
-    esl "(#it x 1)"
-      ..`@equals` "x #it 1;"
+##
+## Statements and expressions
+##
 
 test "variable declaration statement" ->
   esl "(var f)"
@@ -251,7 +356,10 @@ test "explicit block statement" ->
   esl "(block a b)"
     ..`@equals` "{\n    a;\n    b;\n}"
 
-test "call expression" ->
+test "function call" ->
+  esl "(f x y z)"
+    ..`@equals` "f(x, y, z);"
+test "empty function call" ->
   esl "(f)"
     ..`@equals` "f();"
 
@@ -307,84 +415,6 @@ test "if-statement without alternate" ->
           x();
       }
       """
-
-test "ternary expression" ->
-  esl '(?: "something" 0 1)'
-    ..`@equals` "'something' ? 0 : 1;"
-
-test "while loop with explicit body" ->
-  esl '(while (-- n) (block
-                      ((. console log) "ok")
-                      ((. console log) "still ok")))'
-    ..`@equals` "while (--n) {\n    console.log('ok');\n    console.log('still ok');\n}"
-
-test "while loop with explicit body that contains a block" ->
-  esl '(while (-- n) (block
-                      (block a)))'
-    ..`@equals` "while (--n) {\n    {\n        a;\n    }\n}"
-
-test "while loop with implicit body" ->
-  esl '(while (-- n) ((. console log) "ok")
-                     ((. console log) "still ok"))'
-    ..`@equals` "while (--n) {\n    console.log('ok');\n    console.log('still ok');\n}"
-
-test "do/while loop with implicit body" ->
-  esl '(dowhile (-- n) ((. console log) "ok")
-                     ((. console log) "still ok"))'
-    ..`@equals` "do {\n    console.log('ok');\n    console.log('still ok');\n} while (--n);"
-
-test "do/while loop with explicit body" ->
-  esl '(dowhile (-- n) (block
-                        ((. console log) "ok")
-                        ((. console log) "still ok")))'
-    ..`@equals` "do {\n    console.log('ok');\n    console.log('still ok');\n} while (--n);"
-
-test "for loop with implicit body" ->
-  esl '(for (var x 1) (< x 10) (++ x) ((. console log) "ok")
-                                    ((. console log) "still ok"))'
-    ..`@equals` "for (var x = 1; x < 10; ++x) {\n    console.log('ok');\n    console.log('still ok');\n}"
-
-test "for loop with explicit body" ->
-  esl '(for (var x 1) (< x 10) (++ x) (block ((. console log) "ok")
-                                           ((. console log) "still ok")))'
-    ..`@equals` "for (var x = 1; x < 10; ++x) {\n    console.log('ok');\n    console.log('still ok');\n}"
-
-test "for loop with no body" ->
-  esl '(for (var x 1) (< x 10) (++ x))'
-    ..`@equals` "for (var x = 1; x < 10; ++x) {\n}"
-
-test "for loop with null update" ->
-  esl '(for (var x 1) (< x 10) () ((. console log) "ok")
-                                ((. console log) "still ok"))'
-    ..`@equals` "for (var x = 1; x < 10;) {\n    console.log('ok');\n    console.log('still ok');\n}"
-
-test "for loop with null init, update and test" ->
-  esl '(for () () () ((. console log) "ok")
-                     ((. console log) "still ok"))'
-    ..`@equals` "for (;;) {\n    console.log('ok');\n    console.log('still ok');\n}"
-
-test "for-in loop with implicit body" ->
-  esl '(forin (var x) xs ((. console log) x))'
-    ..`@equals` "for (var x in xs) {\n    console.log(x);\n}"
-
-test "for-in loop with explicit body" ->
-  esl '(forin (var x) xs (block ((. console log) x)))'
-    ..`@equals` "for (var x in xs) {\n    console.log(x);\n}"
-
-test "multiple statements in program" ->
-  esl '((. console log) "hello") ((. console log) "world")'
-    ..`@equals` "console.log('hello');\nconsole.log('world');"
-
-test "function with implicit block body" ->
-  esl '(lambda (x) ((. console log) "hello") \
-                   ((. console log) "world"))'
-    ..`@equals` "(function (x) {\n    console.log(\'hello\');\n    console.log(\'world\');\n});"
-
-test "function with explicit block body" ->
-  esl '(lambda (x) (block
-                      ((. console log) "hello") \
-                      ((. console log) "world")))'
-    ..`@equals` "(function (x) {\n    console.log(\'hello\');\n    console.log(\'world\');\n});"
 
 test "new statement" ->
   esl '(new Error "hi") (new x)'
@@ -521,6 +551,113 @@ test "try-catch (`finally`; no `catch`)" ->
           y();
       }
       """
+
+test "property access (dotting) chains identifiers" ->
+  esl "(. a b c)"
+    ..`@equals` "a.b.c;"
+
+test "property access (dotting) chains literals" ->
+  esl "(. a 1 2)"
+    ..`@equals` "a[1][2];"
+
+test "property access (dotting) can be nested" ->
+  esl "(. a (. a (. b name)))"
+    ..`@equals` "a[a[b.name]];"
+
+test "property access (dotting) chains mixed literals and identifiers" ->
+  esl "(. a b 2 a)"
+    ..`@equals` "a.b[2].a;"
+
+test "property access (dotting) treats strings as literals, not identifiers" ->
+  esl "(. a \"hi\")"
+    ..`@equals` "a['hi'];"
+
+test "computed member expression (\"square brackets\")" ->
+  esl "(get a b 5)"
+    ..`@equals` "a[b][5];"
+
+##
+## Loop constructs
+##
+
+test "while loop with explicit body" ->
+  esl '(while (-- n) (block
+                      ((. console log) "ok")
+                      ((. console log) "still ok")))'
+    ..`@equals` "while (--n) {\n    console.log('ok');\n    console.log('still ok');\n}"
+
+test "while loop with explicit body that contains a block" ->
+  esl '(while (-- n) (block
+                      (block a)))'
+    ..`@equals` "while (--n) {\n    {\n        a;\n    }\n}"
+
+test "while loop with implicit body" ->
+  esl '(while (-- n) ((. console log) "ok")
+                     ((. console log) "still ok"))'
+    ..`@equals` "while (--n) {\n    console.log('ok');\n    console.log('still ok');\n}"
+
+test "do/while loop with implicit body" ->
+  esl '(dowhile (-- n) ((. console log) "ok")
+                     ((. console log) "still ok"))'
+    ..`@equals` "do {\n    console.log('ok');\n    console.log('still ok');\n} while (--n);"
+
+test "do/while loop with explicit body" ->
+  esl '(dowhile (-- n) (block
+                        ((. console log) "ok")
+                        ((. console log) "still ok")))'
+    ..`@equals` "do {\n    console.log('ok');\n    console.log('still ok');\n} while (--n);"
+
+test "for loop with implicit body" ->
+  esl '(for (var x 1) (< x 10) (++ x) ((. console log) "ok")
+                                    ((. console log) "still ok"))'
+    ..`@equals` "for (var x = 1; x < 10; ++x) {\n    console.log('ok');\n    console.log('still ok');\n}"
+
+test "for loop with explicit body" ->
+  esl '(for (var x 1) (< x 10) (++ x) (block ((. console log) "ok")
+                                           ((. console log) "still ok")))'
+    ..`@equals` "for (var x = 1; x < 10; ++x) {\n    console.log('ok');\n    console.log('still ok');\n}"
+
+test "for loop with no body" ->
+  esl '(for (var x 1) (< x 10) (++ x))'
+    ..`@equals` "for (var x = 1; x < 10; ++x) {\n}"
+
+test "for loop with null update" ->
+  esl '(for (var x 1) (< x 10) () ((. console log) "ok")
+                                ((. console log) "still ok"))'
+    ..`@equals` "for (var x = 1; x < 10;) {\n    console.log('ok');\n    console.log('still ok');\n}"
+
+test "for loop with null init, update and test" ->
+  esl '(for () () () ((. console log) "ok")
+                     ((. console log) "still ok"))'
+    ..`@equals` "for (;;) {\n    console.log('ok');\n    console.log('still ok');\n}"
+
+test "for-in loop with implicit body" ->
+  esl '(forin (var x) xs ((. console log) x))'
+    ..`@equals` "for (var x in xs) {\n    console.log(x);\n}"
+
+test "for-in loop with explicit body" ->
+  esl '(forin (var x) xs (block ((. console log) x)))'
+    ..`@equals` "for (var x in xs) {\n    console.log(x);\n}"
+
+test "multiple statements in program" ->
+  esl '((. console log) "hello") ((. console log) "world")'
+    ..`@equals` "console.log('hello');\nconsole.log('world');"
+
+test "function with implicit block body" ->
+  esl '(lambda (x) ((. console log) "hello") \
+                   ((. console log) "world"))'
+    ..`@equals` "(function (x) {\n    console.log(\'hello\');\n    console.log(\'world\');\n});"
+
+test "function with explicit block body" ->
+  esl '(lambda (x) (block
+                      ((. console log) "hello") \
+                      ((. console log) "world")))'
+    ..`@equals` "(function (x) {\n    console.log(\'hello\');\n    console.log(\'world\');\n});"
+
+##
+## Macros and quoting
+##
+
 test "quoting a list produces array" ->
   esl "'(1 2 3)"
     eval ..
@@ -1138,6 +1275,10 @@ test "multiple invocations of the compiler are separate" ->
   esl "(macro what (lambda () (return 'hi)))"
   esl "(what)"
     .. `@equals` "what();" # instead of "hi;"
+
+##
+## Source maps
+##
 
 test "identifier source map" ->
   { code, map } = esl.with-source-map "x" filename : "test.esl"
